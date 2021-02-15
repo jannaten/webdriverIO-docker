@@ -1,0 +1,22 @@
+{
+  "name": "webdriver-docker",
+  "version": "1.0.0",
+  "description": "This is a sample script to run WebdriverIO Automation scripts in docker.\r I have added the compose file and the package.json \r You can clone this repository and do an npm install to get going.",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx wdio wdio.conf.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@wdio/cli": "^7.0.1"
+  },
+  "devDependencies": {
+    "@wdio/local-runner": "^7.0.1",
+    "@wdio/mocha-framework": "^7.0.0",
+    "@wdio/spec-reporter": "^7.0.1",
+    "@wdio/sync": "^7.0.1",
+    "wdio-docker-service": "^3.1.0"
+  }
+}
