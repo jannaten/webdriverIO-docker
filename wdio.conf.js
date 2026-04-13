@@ -39,6 +39,11 @@ exports.config = {
       browserName: 'chrome',
       maxInstances: 3,
       acceptInsecureCerts: true,
+      // Disable WebDriver BiDi — WDIO v9 enables it automatically when the
+      // browser supports it, but the BiDi WebSocket URL returned by the Grid
+      // points to the node's Docker-internal IP which the test runner cannot
+      // reach directly. Classic WebDriver routes cleanly through the hub.
+      'wdio:enforceWebDriverClassic': true,
       'goog:chromeOptions': {
         args: [
           '--disable-gpu',
@@ -53,6 +58,7 @@ exports.config = {
       browserName: 'firefox',
       maxInstances: 3,
       acceptInsecureCerts: true,
+      'wdio:enforceWebDriverClassic': true,
       'moz:firefoxOptions': {
         args: process.env.HEADLESS === 'true' ? ['-headless'] : [],
       },
