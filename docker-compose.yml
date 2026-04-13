@@ -6,11 +6,14 @@
 #   Stop & clean:      docker compose down --remove-orphans
 #
 # The Grid UI is available at http://localhost:4444 once running.
+#
+# Images: seleniarm/* for Apple Silicon (linux/arm64);
+#         selenium/*  for x86-64 (CI/Linux).
 
 services:
   # ── Hub ────────────────────────────────────────────────────────────────────
   selenium-hub:
-    image: selenium/hub:4
+    image: seleniarm/hub:4
     container_name: selenium-hub
     ports:
       - '4442:4442' # Event-bus publish
@@ -25,11 +28,13 @@ services:
 
   # ── Chrome Node ────────────────────────────────────────────────────────────
   chrome:
-    image: selenium/node-chrome:4
+    image: seleniarm/node-chromium:4
     shm_size: '2gb'
     depends_on:
       selenium-hub:
         condition: service_healthy
+    ports:
+      - '7900:7900' # noVNC — open http://localhost:7900 (password: secret)
     environment:
       SE_EVENT_BUS_HOST: selenium-hub
       SE_EVENT_BUS_PUBLISH_PORT: 4442
@@ -37,16 +42,21 @@ services:
       SE_NODE_MAX_SESSIONS: 3
       SE_NODE_SESSION_TIMEOUT: 300
       SE_NODE_OVERRIDE_MAX_SESSIONS: 'true'
+      SE_SCREEN_WIDTH: 1920
+      SE_SCREEN_HEIGHT: 1080
+      SE_SCREEN_DEPTH: 24
     volumes:
       - /dev/shm:/dev/shm
 
   # ── Firefox Node ───────────────────────────────────────────────────────────
   firefox:
-    image: selenium/node-firefox:4
+    image: seleniarm/node-firefox:4
     shm_size: '2gb'
     depends_on:
       selenium-hub:
         condition: service_healthy
+    ports:
+      - '7901:7900' # noVNC — open http://localhost:7901 (password: secret)
     environment:
       SE_EVENT_BUS_HOST: selenium-hub
       SE_EVENT_BUS_PUBLISH_PORT: 4442
@@ -54,5 +64,8 @@ services:
       SE_NODE_MAX_SESSIONS: 3
       SE_NODE_SESSION_TIMEOUT: 300
       SE_NODE_OVERRIDE_MAX_SESSIONS: 'true'
+      SE_SCREEN_WIDTH: 1920
+      SE_SCREEN_HEIGHT: 1080
+      SE_SCREEN_DEPTH: 24
     volumes:
       - /dev/shm:/dev/shm
