@@ -8,7 +8,6 @@ const CheckboxesPage = require('../pageobjects/checkboxes.page');
 
 describe('UI Components — Checkboxes', () => {
   beforeEach(async () => {
-    await browser.deleteCookies();
     await CheckboxesPage.open();
   });
 

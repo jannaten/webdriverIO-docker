@@ -9,13 +9,19 @@ const { USERS } = require('../data/users');
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Authentication — Login', () => {
-  // Delete all cookies before each test so every test starts with a clean
-  // session. The-internet uses Rack::Protection (CSRF) which ties a token to
-  // the session cookie. Without this, Chrome serves a cached /login page that
-  // carries a stale CSRF token — the server silently rejects the form and
-  // redirects back to /login, causing all tests after the first to fail.
+  // Recreate the WebDriver session before each test so Chrome starts with a
+  // completely clean slate — no cookies, no HTTP cache, no connection pool,
+  // no retained internal state of any kind.
+  //
+  // Chrome 147 in headless mode retains session-level state between tests
+  // that even browser.deleteCookies() does not clear. After a successful
+  // login in test 1 (ends on /secure), subsequent tests find the form
+  // submission silently failing — the server redirects back to /login and
+  // no flash appears. browser.reloadSession() is the only reliable fix
+  // because it tears down the browser process-level context entirely.
+  // Firefox is unaffected and does not need this workaround.
   beforeEach(async () => {
-    await browser.deleteCookies();
+    await browser.reloadSession();
     await LoginPage.open();
   });
 
