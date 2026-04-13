@@ -67,11 +67,12 @@ jobs:
         run: docker compose up -d
 
       - name: Wait for Grid to be ready
+        # Grid 4 returns {"value":{"ready": true}} — use jq so spacing in the
+        # JSON payload never causes a false negative match.
         run: |
           echo "Polling http://localhost:4444/status ..."
           for i in $(seq 1 30); do
-            STATUS=$(curl -s http://localhost:4444/status || true)
-            if echo "$STATUS" | grep -q '"ready":true'; then
+            if curl -sf http://localhost:4444/status | jq -e '.value.ready == true' > /dev/null 2>&1; then
               echo "Grid is ready after $((i * 3))s"
               exit 0
             fi

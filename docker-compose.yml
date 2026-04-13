@@ -1,13 +1,11 @@
 # Selenium Grid 4 — Hub + Node architecture
 #
 # Usage:
-#   Start (detached):  docker-compose up -d
-#   Scale Chrome:      docker-compose up -d --scale chrome=3
-#   Stop & clean:      docker-compose down --remove-orphans
+#   Start (detached):  docker compose up -d
+#   Scale Chrome:      docker compose up -d --scale chrome=3
+#   Stop & clean:      docker compose down --remove-orphans
 #
 # The Grid UI is available at http://localhost:4444 once running.
-
-version: '3.8'
 
 services:
   # ── Hub ────────────────────────────────────────────────────────────────────
