@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  # Allow a manual trigger from the Actions tab
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Job 1: Static analysis ─────────────────────────────────────────────────
+  # Runs fast (no Docker) and fails early so E2E slots aren't wasted on
+  # code that wouldn't pass a linter anyway.
+  lint:
+    name: Lint & Format check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier format check
+        run: npm run format:check
+
+  # ── Job 2: E2E tests ───────────────────────────────────────────────────────
+  e2e:
+    name: E2E — Chrome & Firefox on Selenium Grid 4
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint # Don't spin up Docker if lint fails
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Node.js ───────────────────────────────────────────────────────────
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── Selenium Grid ──────────────────────────────────────────────────────
+      - name: Start Selenium Grid (detached)
+        run: docker-compose up -d
+
+      - name: Wait for Grid to be ready
+        run: |
+          echo "Polling http://localhost:4444/status ..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s http://localhost:4444/status || true)
+            if echo "$STATUS" | grep -q '"ready":true'; then
+              echo "Grid is ready after $((i * 3))s"
+              exit 0
+            fi
+            echo "  attempt $i/30 — not ready yet, sleeping 3s"
+            sleep 3
+          done
+          echo "Grid did not become ready in time — dumping compose logs:"
+          docker-compose logs
+          exit 1
+
+      # ── Tests ─────────────────────────────────────────────────────────────
+      - name: Run E2E tests
+        run: npm test
+        env:
+          HEADLESS: 'true'
+          SELENIUM_HOST: localhost
+          SELENIUM_PORT: 4444
+
+      # ── Reporting ─────────────────────────────────────────────────────────
+      - name: Generate Allure report
+        if: always()
+        run: npm run report:generate
+
+      - name: Upload Allure HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-report-${{ github.run_number }}
+          path: allure-report/
+          retention-days: 30
+
+      - name: Upload raw Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results-${{ github.run_number }}
+          path: allure-results/
+          retention-days: 7
+
+      # ── Cleanup ───────────────────────────────────────────────────────────
+      - name: Stop Selenium Grid
+        if: always()
+        run: docker-compose down --remove-orphans

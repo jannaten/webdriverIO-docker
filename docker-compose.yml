@@ -1,40 +1,60 @@
-# To execute this docker-compose yml file use `docker-compose -f docker-compose-v3.yml up`
-# Add the `-d` flag at the end for detached execution
-# To stop the execution, hit Ctrl+C, and then `docker-compose -f docker-compose-v3.yml down`
-version: "3"
+# Selenium Grid 4 — Hub + Node architecture
+#
+# Usage:
+#   Start (detached):  docker-compose up -d
+#   Scale Chrome:      docker-compose up -d --scale chrome=3
+#   Stop & clean:      docker-compose down --remove-orphans
+#
+# The Grid UI is available at http://localhost:4444 once running.
+
+version: '3.8'
+
 services:
-  chrome:
-    image: selenium/node-chrome:4.0.0-beta-1-prerelease-20210210
-    volumes:
-      - /dev/shm:/dev/shm
-    depends_on:
-      - selenium-hub
-    scale: 2
-    environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-    ports:
-      - "5900"
-
-  firefox:
-    image: selenium/node-firefox:4.0.0-beta-1-prerelease-20210210
-    volumes:
-      - /dev/shm:/dev/shm
-    depends_on:
-      - selenium-hub
-    scale: 2
-    environment:
-      - SE_EVENT_BUS_HOST=selenium-hub
-      - SE_EVENT_BUS_PUBLISH_PORT=4442
-      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-    ports:
-      - "5900"
-
+  # ── Hub ────────────────────────────────────────────────────────────────────
   selenium-hub:
-    image: selenium/hub:4.0.0-beta-1-prerelease-20210210
+    image: selenium/hub:4
     container_name: selenium-hub
     ports:
-      - "4442:4442"
-      - "4443:4443"
-      - "4444:4444"
+      - '4442:4442' # Event-bus publish
+      - '4443:4443' # Event-bus subscribe
+      - '4444:4444' # WebDriver / Grid UI
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:4444/status']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # ── Chrome Node ────────────────────────────────────────────────────────────
+  chrome:
+    image: selenium/node-chrome:4
+    shm_size: '2gb'
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      SE_EVENT_BUS_HOST: selenium-hub
+      SE_EVENT_BUS_PUBLISH_PORT: 4442
+      SE_EVENT_BUS_SUBSCRIBE_PORT: 4443
+      SE_NODE_MAX_SESSIONS: 3
+      SE_NODE_SESSION_TIMEOUT: 300
+      SE_NODE_OVERRIDE_MAX_SESSIONS: 'true'
+    volumes:
+      - /dev/shm:/dev/shm
+
+  # ── Firefox Node ───────────────────────────────────────────────────────────
+  firefox:
+    image: selenium/node-firefox:4
+    shm_size: '2gb'
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      SE_EVENT_BUS_HOST: selenium-hub
+      SE_EVENT_BUS_PUBLISH_PORT: 4442
+      SE_EVENT_BUS_SUBSCRIBE_PORT: 4443
+      SE_NODE_MAX_SESSIONS: 3
+      SE_NODE_SESSION_TIMEOUT: 300
+      SE_NODE_OVERRIDE_MAX_SESSIONS: 'true'
+    volumes:
+      - /dev/shm:/dev/shm

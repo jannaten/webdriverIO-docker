@@ -1,34 +1,104 @@
+/**
+ * WebdriverIO Configuration
+ *
+ * Primary run mode: tests execute against a Selenium Grid 4 instance.
+ * Start the Grid first:  npm run docker:up
+ * Then run tests:        npm test
+ *
+ * Environment variables
+ * ─────────────────────
+ * SELENIUM_HOST  – Grid hostname          (default: localhost)
+ * SELENIUM_PORT  – Grid port              (default: 4444)
+ * HEADLESS       – 'true' for headless    (default: false)
+ */
+
+'use strict';
+
 exports.config = {
-  runner: "local",
-  hostname: "localhost",
-  port: 4444,
-  path: "/",
-  specs: ["./test/specs/**/*.js"],
+  // ─── Runner ──────────────────────────────────────────────────────────────
+  runner: 'local',
+  // ─── Selenium Grid 4 endpoint ────────────────────────────────────────────
+  // Grid 4 uses '/' as its WebDriver path (not the legacy '/wd/hub').
+  hostname: process.env.SELENIUM_HOST || 'localhost',
+  port: Number(process.env.SELENIUM_PORT) || 4444,
+  path: '/',
+  protocol: 'http',
+  // ─── Test files ──────────────────────────────────────────────────────────
+  specs: ['./test/specs/**/*.e2e.js'],
   exclude: [],
-  maxInstances: 10,
+  // Named suites for selective execution: wdio run wdio.conf.js --suite auth
+  suites: {
+    auth: ['./test/specs/login.e2e.js'],
+    ui: ['./test/specs/navigation.e2e.js'],
+  },
+  // ─── Parallelism ─────────────────────────────────────────────────────────
+  maxInstances: 6,
+  // ─── Capabilities ────────────────────────────────────────────────────────
   capabilities: [
     {
-      maxInstances: 5,
-      browserName: "chrome",
+      browserName: 'chrome',
+      maxInstances: 3,
       acceptInsecureCerts: true,
+      'goog:chromeOptions': {
+        args: [
+          '--disable-gpu',
+          '--no-sandbox',
+          '--disable-dev-shm-usage',
+          '--window-size=1920,1080',
+          ...(process.env.HEADLESS === 'true' ? ['--headless=new'] : []),
+        ],
+      },
     },
     {
-      maxInstances: 5,
-      browserName: "firefox",
+      browserName: 'firefox',
+      maxInstances: 3,
       acceptInsecureCerts: true,
+      'moz:firefoxOptions': {
+        args: process.env.HEADLESS === 'true' ? ['-headless'] : [],
+      },
     },
   ],
-  logLevel: "info",
+  // ─── General settings ────────────────────────────────────────────────────
+  logLevel: 'warn',
   bail: 0,
-  baseUrl: "http://localhost",
-  waitforTimeout: 10000,
+  baseUrl: 'https://the-internet.herokuapp.com',
+  waitforTimeout: 15000,
   connectionRetryTimeout: 120000,
   connectionRetryCount: 3,
-  services: ["docker"],
-  framework: "mocha",
-  reporters: ["spec"],
+  // No local services needed — Selenium Grid is managed by Docker Compose
+  services: [],
+  // ─── Framework ───────────────────────────────────────────────────────────
+  framework: 'mocha',
   mochaOpts: {
-    ui: "bdd",
+    ui: 'bdd',
     timeout: 60000,
+  },
+  // ─── Reporters ───────────────────────────────────────────────────────────
+  reporters: [
+    'spec',
+    [
+      'allure',
+      {
+        outputDir: 'allure-results',
+        disableWebdriverStepsReporting: true,
+        disableWebdriverScreenshotsReporting: false,
+      },
+    ],
+  ],
+  // ─── Hooks ───────────────────────────────────────────────────────────────
+  before: async function () {
+    // Global setup: runs once per worker before any tests in that worker.
+  },
+  beforeSuite: async function (_suite) {
+    // Fires before each describe block.
+  },
+  afterTest: async function (_test, _context, { error }) {
+    // Capture a screenshot on test failure for Allure attachment.
+    if (error) {
+      await browser.takeScreenshot();
+    }
+  },
+  after: async function () {
+    // Global teardown: runs once per worker after all tests in that worker.
   },
 };
