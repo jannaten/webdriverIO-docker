@@ -9,8 +9,13 @@ const { USERS } = require('../data/users');
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Authentication — Login', () => {
-  // Navigate to the login page before each test so tests are fully isolated.
+  // Delete all cookies before each test so every test starts with a clean
+  // session. The-internet uses Rack::Protection (CSRF) which ties a token to
+  // the session cookie. Without this, Chrome serves a cached /login page that
+  // carries a stale CSRF token — the server silently rejects the form and
+  // redirects back to /login, causing all tests after the first to fail.
   beforeEach(async () => {
+    await browser.deleteCookies();
     await LoginPage.open();
   });
 
