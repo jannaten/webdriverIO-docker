@@ -64,7 +64,7 @@ jobs:
 
       # ── Selenium Grid ──────────────────────────────────────────────────────
       - name: Start Selenium Grid (detached)
-        run: docker-compose up -d
+        run: docker compose up -d
 
       - name: Wait for Grid to be ready
         run: |
@@ -79,7 +79,7 @@ jobs:
             sleep 3
           done
           echo "Grid did not become ready in time — dumping compose logs:"
-          docker-compose logs
+          docker compose logs
           exit 1
 
       # ── Tests ─────────────────────────────────────────────────────────────
@@ -114,4 +114,4 @@ jobs:
       # ── Cleanup ───────────────────────────────────────────────────────────
       - name: Stop Selenium Grid
         if: always()
-        run: docker-compose down --remove-orphans
+        run: docker compose down --remove-orphans

@@ -125,7 +125,7 @@ npm run docker:down
 **Scale browser nodes** for heavier parallel workloads:
 
 ```bash
-docker-compose up -d --scale chrome=4 --scale firefox=2
+docker compose up -d --scale chrome=4 --scale firefox=2
 ```
 
 ### Selective suite execution
@@ -209,7 +209,7 @@ npm run report:open       # opens a browser at localhost:port
 The [GitHub Actions workflow](.github/workflows/ci.yml) runs on every push and pull request to `master`/`main`:
 
 1. Checks out the repository and installs dependencies via `npm ci`
-2. Starts the Selenium Grid with `docker-compose up -d`
+2. Starts the Selenium Grid with `docker compose up -d`
 3. Polls `http://localhost:4444/status` until the Grid reports `"ready": true`
 4. Executes all E2E tests in **headless** mode (`HEADLESS=true`)
 5. Generates an Allure report regardless of test outcome
